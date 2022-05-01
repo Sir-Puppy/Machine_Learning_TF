@@ -1,18 +1,31 @@
+
+
+#######################################################################################################################
+
+
+#   According to researchers (https://doi.org/10.1038/s41598-021-87578-0), a very simple AI is able to accurately
+#   predict the type of ion channel abnormality if properly trained
+#   I have recreated this AI in the hopes of doing something similar for my own project.
+
+#   Regardless, I hope you can make use of this. Hopefully I will share a pretrained model in the future.
+
+
+#######################################################################################################################
+
 import os
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
-from tensorflow.keras.datasets import mnist
 
 # To Avoid GPU errors
 physical_devices = tf.config.list_physical_devices("GPU")
 tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
-(x_train, y_train), (x_test, y_test) = mnist.load_data()
-x_train = x_train.reshape(-1, 28 * 28).astype("float32") / 255.0
-x_test = x_test.reshape(-1, 28 * 28).astype("float32") / 255.0
+img_height = 128
+img_width = 128
+batch_size = 5
 
 class CNNBlock(layers.Layer):
     def __init__(self, out_channels, kernel_size=3):
@@ -27,36 +40,45 @@ class CNNBlock(layers.Layer):
         return x
 
 
-model1 = keras.Sequential(
-    [CNNBlock(32), CNNBlock(130), CNNBlock(65), layers.Flatten(), layers.Dense(10),]
+model = keras.Sequential(
+    [CNNBlock(32), CNNBlock(130), layers.Flatten(), layers.Dense(10, activation= "softmax"),]
 )
 
-class model2(keras.Model):
-    def __init__(self):
-        super(model2, self).__init__()
-        self.dense1 = layers.Dense(130, activation="relu")
-        self.dense2 = layers.Dense(65, activation="relu")
-        self.dense3 = layers.Dense(10, activation="softmax")
+ds_train = tf.keras.preprocessing.image_dataset_from_directory(
+    "data/trace_collection/",
+    labels="inferred",
+    label_mode = "int",
+    color_mode = "grayscale",
+    batch_size = batch_size,
+    image_size = (img_height, img_width),
+    shuffle = True,
+    seed = 12345,
+    validation_split = 0.1,
+    subset = "training",
 
-    def call(self, input_tensor):
-        x = self.dense1(input_tensor)
-        x = self.dense2(x)
-        x = self.dense3(x)
-        return x
+)
 
-model = model2()
-#base_input = model.layers[0].input
-#base_output = model.layers[-2].output
-#output = layers.Dense(10)(layers.Flatten()(base_output))
-#model = keras.Model(base_input, output)
+ds_validation = tf.keras.preprocessing.image_dataset_from_directory(
+    "data/trace_collection/",
+    labels="inferred",
+    label_mode = "int",
+    color_mode = "grayscale",
+    batch_size = batch_size,
+    image_size = (img_height, img_width),
+    shuffle = True,
+    seed = 12345,
+    validation_split = 0.1,
+    subset = "validation",
+
+)
 
 model.compile(
-    loss=keras.losses.SparseCategoricalCrossentropy(),
+    loss=keras.losses.CategoricalCrossentropy(),
     optimizer=keras.optimizers.Adam(learning_rate=0.001),
     metrics=["accuracy"],
 )
 
-model.fit(x_train, y_train, batch_size=32, epochs=2, verbose=2)
-model.evaluate(x_test, y_test, batch_size=32, verbose=2)
+model.fit(ds_train, batch_size=32, epochs=2, verbose=2)
+model.evaluate(ds_validation, batch_size=32, verbose=2)
 print(model.summary())
-model.save("trace_prediction/")
+#model.save("trace_prediction/")

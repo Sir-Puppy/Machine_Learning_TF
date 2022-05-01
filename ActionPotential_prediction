@@ -1,0 +1,62 @@
+import os
+
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers
+from tensorflow.keras.datasets import mnist
+
+# To Avoid GPU errors
+physical_devices = tf.config.list_physical_devices("GPU")
+tf.config.experimental.set_memory_growth(physical_devices[0], True)
+
+(x_train, y_train), (x_test, y_test) = mnist.load_data()
+x_train = x_train.reshape(-1, 28 * 28).astype("float32") / 255.0
+x_test = x_test.reshape(-1, 28 * 28).astype("float32") / 255.0
+
+class CNNBlock(layers.Layer):
+    def __init__(self, out_channels, kernel_size=3):
+        super(CNNBlock, self).__init__()
+        self.conv = layers.Conv2D(out_channels, kernel_size, padding="same")
+        self.bn = layers.BatchNormalization()
+
+    def call(self, input_tensor, training=False):
+        x = self.conv(input_tensor)
+        x = self.bn(x, training=training)
+        x = tf.nn.relu(x)
+        return x
+
+
+model1 = keras.Sequential(
+    [CNNBlock(32), CNNBlock(130), CNNBlock(65), layers.Flatten(), layers.Dense(10),]
+)
+
+class model2(keras.Model):
+    def __init__(self):
+        super(model2, self).__init__()
+        self.dense1 = layers.Dense(130, activation="relu")
+        self.dense2 = layers.Dense(65, activation="relu")
+        self.dense3 = layers.Dense(10, activation="softmax")
+
+    def call(self, input_tensor):
+        x = self.dense1(input_tensor)
+        x = self.dense2(x)
+        x = self.dense3(x)
+        return x
+
+model = model2()
+#base_input = model.layers[0].input
+#base_output = model.layers[-2].output
+#output = layers.Dense(10)(layers.Flatten()(base_output))
+#model = keras.Model(base_input, output)
+
+model.compile(
+    loss=keras.losses.SparseCategoricalCrossentropy(),
+    optimizer=keras.optimizers.Adam(learning_rate=0.001),
+    metrics=["accuracy"],
+)
+
+model.fit(x_train, y_train, batch_size=32, epochs=2, verbose=2)
+model.evaluate(x_test, y_test, batch_size=32, verbose=2)
+print(model.summary())
+model.save("trace_prediction/")

@@ -17,11 +17,18 @@ class GraphDataset(Dataset):
     def __getitem__(self, idx):
         src_node = self.graph_df.iloc[idx]['source_node']
         tgt_node = self.graph_df.iloc[idx]['target_node']
-        edge_weight = self.graph_df.iloc[idx]['edge_weight']
-        return src_node, tgt_node, edge_weight
+        return src_node, tgt_node
 
 graph_dataset = GraphDataset(graph_df)
 graph_dataloader = DataLoader(graph_dataset, batch_size=64, shuffle=True)
+
+
+# parameters
+input_dim = 2
+hidden_dim = 10
+output_dim = 1
+learning_rate = 0.01
+num_epochs = 100
 
 # GRNN model
 class GRNN(nn.Module):
@@ -42,13 +49,6 @@ class GRNN(nn.Module):
 # Loss function
 criterion = nn.MSELoss()
 
-# parameters
-input_dim = 2
-hidden_dim = 10
-output_dim = 1
-learning_rate = 0.01
-num_epochs = 100
-
 # Optimizer
 optimizer = optim.Adam(model.parameters(), learning_rate)
 
@@ -57,10 +57,10 @@ optimizer = optim.Adam(model.parameters(), learning_rate)
 model = GRNN(input_dim, hidden_dim, output_dim)
 for epoch in range(num_epochs):
     for i, batch in enumerate(graph_dataloader):
-        src_nodes, tgt_nodes, edge_weights = batch
+        src_nodes, tgt_nodes = batch
         optimizer.zero_grad()
         output = model(src_nodes, tgt_nodes)
-        loss = criterion(output, edge_weights)
+        loss = criterion(output)
         loss.backward()
         optimizer.step()
 

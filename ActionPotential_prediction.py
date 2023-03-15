@@ -7,8 +7,6 @@
 #   predict the type of ion channel abnormality if properly trained
 #   I have recreated this AI in the hopes of doing something similar for my own project.
 
-#   Regardless, I hope you can make use of this. Hopefully I will share a pretrained model in the future.
-
 
 #######################################################################################################################
 

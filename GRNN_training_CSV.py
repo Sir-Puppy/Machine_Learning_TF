@@ -2,9 +2,19 @@ import pandas as pd
 from torch.utils.data import Dataset, DataLoader
 import torch.nn as nn
 import torch.optim as optim
+import csv
+import os
 
 # CSV reader
-graph_df = pd.read_csv('graph.csv')
+# Directory where the CSV files are located
+directory = "desktop/ML/GRNNtest"
+
+# Loop through files
+for filename in os.listdir(directory):
+    if filename.endswith(".csv"):
+        
+        with open(directory + filename, 'r') as csv_file:
+            graph_df = pd.read_csv(csv_file)
 
 #  PyTorch DataLoader (CSV)
 class GraphDataset(Dataset):
@@ -65,3 +75,17 @@ for epoch in range(num_epochs):
         optimizer.step()
 
 
+# Test ######################################################################
+test_dataset = GraphDataset(graph_df)
+test_dataloader = DataLoader(test_dataset, batch_size=64, shuffle=False)
+
+model.eval()
+test_loss = 0
+with torch.no_grad():
+    for batch in test_dataloader:
+        src_nodes, tgt_nodes = batch
+        output = model(src_nodes, tgt_nodes)
+        test_loss += criterion(output).item()
+
+test_loss /= len(test_dataloader.dataset)
+print(f'Test MSE: {test_loss:.3f}')
